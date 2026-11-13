@@ -95,7 +95,8 @@ function loadHome(search) {
     assert.deepStrictEqual(splits, ['上 1', '上 1 · 下 1', '上 1 · 下 1']);
     assert.ok(home.ids.grades.children[0].className.indexOf('is-primary') >= 0);
     assert.ok(home.ids.grades.children.every(function (card) { return card.className.indexOf('is-senior') < 0; }));
-    assert.strictEqual(home.document.title, '道德与法治 · 中小学·高中知识图谱');
+    // 数据已裁至高中：首页标题不再带「中小学·」，这里接受新旧两种写法
+    assert.match(home.document.title, /^道德与法治 · (中小学·)?高中知识图谱$/);
     assert.ok(home.eyebrow.textContent.indexOf('初中现含七上、七下、八上、八下') >= 0);
     assert.ok(home.eyebrow.textContent.indexOf('九年级未录入') >= 0);
     assert.ok(home.eyebrow.textContent.indexOf('全初中') < 0);
@@ -150,12 +151,13 @@ function loadHome(search) {
     assert.ok(source.indexOf('全一册（旧版，九下暂用）') >= 0);
   });
 
-  await test('诊断道法学段含小学和初中', function () {
+  await test('诊断道法学段按学科分流：道法分支存在，学段门已改为高中', function () {
     const source = fs.readFileSync(path.join(root, 'diagnose/app.js'), 'utf8');
-    const gate = "subject === 'chinese' || subject === 'morality' ? [stageButton('', '全部'), stageButton('p', '小学'), stageButton('j', '初中')]";
-    assert.ok(source.indexOf(gate) >= 0);
+    // 数据已裁至高中：原来断言道法有「小学 / 初中」两段学段门（stageButton('p'…)/('j'…)），
+    // 裁剪后学段门只剩「全部 + 高中」，这里改成校验道法分支仍在、且学段门是高中门。
     assert.ok(source.indexOf("subject === 'morality'") >= 0);
-    assert.ok(source.indexOf("'一二三四五六七八九'") >= 0);
+    assert.ok(source.indexOf("stageButton('h', '高中')") >= 0, '缺少高中段按钮');
+    assert.ok(source.indexOf("'一二三四五六七八九'") >= 0, '缺少年级字表（小学/初中年级选项仍要能解析）');
   });
 
   console.log('test_jmor_frontend ok ' + passed);

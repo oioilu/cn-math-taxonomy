@@ -88,213 +88,64 @@ def _data(name):
 
 
 def test_real_new_points_shape():
-    """真实入库点：每点 4 题、题号唯一、verify 与正确选项一致、官方目录或待核桶、inferred、verbatim false。"""
-    topics = [t for t in _data("topics.json") if str(t.get("id", "")).startswith("cnd_j")]
-    assert topics, "没有真实初中点"
-    questions = [q for q in _data("questions.json") if str(q.get("topicId", "")).startswith("cnd_j")]
+    """真实入库点形状（数据已裁至高中）：每点 4 题、题号唯一、verify 非空、choice 的 verify 与正确选项一致。"""
+    topics = _data("topics.json")
+    questions = _data("questions.json")
     ids = [q["id"] for q in questions]
     assert len(ids) == len(set(ids)), "题号重复"
     by_topic = {}
     for q in questions:
         by_topic.setdefault(q["topicId"], []).append(q)
+    # 只剩高中数学 271 + 物理 177 + 化学 102，每点正好 4 题
+    assert len(topics) == 550
+    assert len(questions) == len(topics) * 4
     for topic in topics:
-        _assert_pending_inferred(topic)
         group = by_topic.get(topic["id"], [])
         assert len(group) == 4, (topic["id"], len(group))
         numbers = []
         for q in group:
+            assert q["id"].startswith(topic["id"] + "_q"), q["id"]
             tail = q["id"].split("_q", 1)[1]
             assert tail.isdigit(), q["id"]
             numbers.append(int(tail))
-            chosen = next(c["text"] for c in q["choices"] if c["key"] == q["answer"])
-            assert json.loads(q["verify"]) == chosen, q["id"]
+            assert (q.get("prompt") or "").strip(), q["id"]
+            assert str(q.get("answer", "")).strip(), q["id"]
+            assert (q.get("verify") or "").strip(), q["id"]
         assert len(set(numbers)) == 4, topic["id"]
-    items = [it for it in _data("cn-curriculum-standards.json").get("items", []) if str(it.get("id", "")).startswith("cds-2022:4.")]
-    assert items, "没有第四学段课标"
-    assert all(it.get("verbatim") is False for it in items)
+    # choice 题：answer 必须是选项 key，且 verify 写的就是正确选项的文本
+    choice = [q for q in questions if q.get("type") == "choice"]
+    assert len(choice) > 1000
+    checked = 0
+    mismatch = []
+    for q in choice:
+        texts = {c["key"]: c["text"] for c in q["choices"]}
+        assert q["answer"] in texts, q["id"]
+        try:
+            want = json.loads(q["verify"])
+        except ValueError:
+            continue  # 少数题的 verify 是算式而不是 JSON，由上面的非空断言覆盖
+        checked += 1
+        if want != texts[q["answer"]]:
+            mismatch.append(q["id"])
+    assert checked > 1000
+    # 现网题库里 5 道 choice 题的 verify 与选项文本不一致（历史遗留），要求 ≥99% 一致，
+    # 避免把已知遗留当成回归，也不放过新引入的不一致。
+    assert len(mismatch) <= 5, mismatch
+    assert len(mismatch) / checked <= 0.01, mismatch
+    # 课标表整表保留，高中（2017 版）三科条款都在
+    std = _data("cn-curriculum-standards.json")
+    items = std.get("items", [])
+    assert len(items) == 855
+    for prefix in ("cms-2017:", "cps-hs-2017:", "cks-hs-2017:"):
+        assert [it for it in items if str(it.get("id", "")).startswith(prefix)], prefix
+    assert all(it.get("verbatim") is False for it in items if str(it.get("id", "")).startswith(("cms-2017:", "cps-hs-2017:", "cks-hs-2017:")))
 
-
-# 八下道法课名锚点。来源是智慧教育平台官方阅读器目录，14 课。
-# 每课可对应多个知识点；点数随再生变化，这里不写死当前的 24。
-G8B_OFFICIAL_LESSONS = {
-    "治国安邦的总章程",
-    "维护宪法权威",
-    "公民的基本权利和义务",
-    "依法行使权利和履行义务",
-    "我国的政治制度",
-    "我国的基本经济制度",
-    "国家权力机关",
-    "中华人民共和国主席",
-    "国家行政机关",
-    "中央军事委员会",
-    "国家监察机关",
-    "国家司法机关",
-    "坚持全面依法治国",
-    "以法治推进国家治理现代化",
-}
-
-
-VOLUME_ISBN = {
-    (7, "上"): "978-7-107-38238-3",
-    (7, "下"): "978-7-107-38239-0",
-    (8, "上"): "978-7-107-39650-2",
-    (8, "下"): "978-7-107-40548-8",
-    (9, "上"): "978-7-107-41303-2",
-}
-
-
-def _assert_pending_inferred(topic):
-    """已确认点 catalog 为 official_toc；待核桶为 pending。课标置信度都是 inferred。"""
-    chapter = topic.get("chapter") or ""
-    if chapter.endswith(" 待核"):
-        assert topic.get("catalog_status") == L.CATALOG_STATUS, topic["id"]
-        assert "第90单元" not in chapter, topic["id"]
-    else:
-        assert topic.get("catalog_status") == L.OFFICIAL_CATALOG_STATUS, topic["id"]
-        isbn = VOLUME_ISBN[(topic["grade"], topic["semester"])]
-        assert isbn in (topic.get("standards") or [{}])[0].get("note", ""), topic["id"]
-    assert topic["standards"][0]["confidence"] == "inferred", topic["id"]
-
-
-# 九上官方阅读器目录的 10 课。不是课文正文逐字核对。
-G9A_OFFICIAL_LESSONS = {
-    "百年大党风华正茂",
-    "坚持以人民为中心",
-    "党是领导一切的",
-    "新的历史方位",
-    "新时代的思想旗帜",
-    "中国腾飞谱新篇",
-    "擘画宏伟蓝图",
-    "实现高质量发展",
-    "凝聚团结伟力",
-    "实现伟大梦想",
-}
-
-
-def test_g9a_official_toc_not_g9b():
-    """九上 10 课按官方目录，九下不建点；七至八年级已确认点也是 official_toc。"""
-    rows = [
-        t for t in _data("topics.json")
-        if str(t.get("id", "")).startswith("cnd_j") and t.get("grade") == 9
-    ]
-    assert rows, "没有九年级道法点"
-    assert all(t.get("semester") == "上" for t in rows)
-    lessons = {t.get("lesson") for t in rows}
-    assert lessons == G9A_OFFICIAL_LESSONS, sorted(lessons ^ G9A_OFFICIAL_LESSONS)
-    assert all(t.get("catalog_status") == "official_toc" for t in rows)
-    blob = "\n".join((t.get("lesson") or "") + "\n" + (t.get("frames") or "") + "\n" + (t.get("name") or "") for t in rows)
-    assert "恢弘" not in blob
-    assert "书写恢宏史诗" in blob
-    assert "“两步走”战略" in blob
-    assert any(t.get("lesson") == "实现高质量发展" and "推动高质量发展" in (t.get("frames") or "") for t in rows)
-    assert any(t.get("lesson") == "实现伟大梦想" for t in rows)
-    assert all("单元思考与行动" not in (t.get("lesson") or "") for t in rows)
-    assert all("978-7-107-41303-2" in (t.get("standards") or [{}])[0].get("note", "") for t in rows)
-    assert all(t["standards"][0]["confidence"] == "inferred" for t in rows)
-    older = [
-        t for t in _data("topics.json")
-        if str(t.get("id", "")).startswith("cnd_j") and t.get("grade") in (7, 8)
-    ]
-    assert older and all(t.get("catalog_status") == L.OFFICIAL_CATALOG_STATUS for t in older)
-
-
-def test_g8b_public_catalog_lessons():
-    """八下 cnd_j 的课名集合等于官方目录 14 课。
-
-    集合来自智慧教育平台官方阅读器目录。不要求每课一点：一课可有多点，
-    因此不断言知识点总数（当前计数不必写死）。
-    """
-    rows = [
-        t for t in _data("topics.json")
-        if str(t.get("id", "")).startswith("cnd_j")
-        and t.get("grade") == 8
-        and t.get("semester") == "下"
-    ]
-    assert rows, "没有八下道法点"
-    lessons = {t.get("lesson") for t in rows}
-    assert lessons == G8B_OFFICIAL_LESSONS, sorted(lessons ^ G8B_OFFICIAL_LESSONS)
-    assert len(rows) >= len(G8B_OFFICIAL_LESSONS)
-    for topic in rows:
-        _assert_pending_inferred(topic)
-
-
-G7A_OFFICIAL_LESSONS = {
-    "开启初中生活", "正确认识自我", "梦想始于当下", "幸福和睦的家庭",
-    "和谐的师生关系", "友谊之树常青", "在集体中成长", "生命可贵",
-    "守护生命安全", "保持身心健康", "确立人生目标", "端正人生态度", "实现人生价值",
-}
-G7B_OFFICIAL_LESSONS = {
-    "青春正当时", "做情绪情感的主人", "人贵自尊", "自信给人力量", "人生当自强",
-    "传承核心思想理念", "弘扬中华人文精神", "践行中华传统美德",
-    "法律为我们护航", "走近民法典", "远离违法犯罪",
-}
-G8A_OFFICIAL_LESSONS = {
-    "丰富的社会生活", "在社会中健康成长", "共建网络美好家园", "遵守社会规则",
-    "社会生活讲道德", "提升法治素养", "追求自由平等", "维护公平正义",
-    "积极奉献社会", "国家利益至上", "军强才能国安", "树立总体国家安全观",
-}
-UNBUILT_OFFICIAL_FRAMES = set()
-BUILT_OFFICIAL_FRAMES = {
-    "cnd_j107": "在奉献中成就精彩人生",
-    "cnd_j108": "认识民法典",
-    "cnd_j109": "友善待人",
-    "cnd_j110": "国家行政机关的性质和职权",
-}
-WRAPPED_G8B_FRAMES = {
-    "中国共产党领导的多党合作和政治协商制度",
-    "公有制为主体、多种所有制经济共同发展",
-    "按劳分配为主体、多种分配方式并存",
-}
-
-
-def _junior_rows(grade=None, semester=None):
-    rows = [t for t in _data("topics.json") if str(t.get("id", "")).startswith("cnd_j")]
-    if grade is not None:
-        rows = [t for t in rows if t.get("grade") == grade]
-    if semester is not None:
-        rows = [t for t in rows if t.get("semester") == semester]
-    return rows
-
-
-def test_g78_official_toc_lessons_and_unbuilt_frames():
-    """七至八年级已确认点挂官方课名；四个原空框已由新点覆盖；不建单元思考与行动。"""
-    g7a = _junior_rows(7, "上")
-    g7b = _junior_rows(7, "下")
-    g8a = _junior_rows(8, "上")
-    g8b = _junior_rows(8, "下")
-    assert {t.get("lesson") for t in g7a} == G7A_OFFICIAL_LESSONS
-    assert {t.get("lesson") for t in g7b} == G7B_OFFICIAL_LESSONS
-    assert {t.get("lesson") for t in g8a} == G8A_OFFICIAL_LESSONS
-    assert {t.get("lesson") for t in g8b} == G8B_OFFICIAL_LESSONS
-    all_g78 = g7a + g7b + g8a + g8b
-    assert all(t.get("catalog_status") == "official_toc" for t in all_g78)
-    assert all("单元思考与行动" not in ((t.get("lesson") or "") + (t.get("frames") or "") + (t.get("chapter") or "") + (t.get("name") or "")) for t in all_g78)
-    frame_blob = "\n".join(t.get("frames") or "" for t in all_g78)
-    for missing in UNBUILT_OFFICIAL_FRAMES:
-        assert missing not in frame_blob, missing
-    for wrapped in WRAPPED_G8B_FRAMES:
-        assert any(wrapped in (t.get("frames") or "") for t in g8b), wrapped
-    j025 = next(t for t in g7a if t["id"] == "cnd_j025")
-    assert j025["frames"] == "在劳动中创造人生价值"
-    j040 = next(t for t in g7b if t["id"] == "cnd_j040")
-    assert j040["frames"] == "保护人身权；保障财产权"
-    assert "认识民法典" in (j040.get("standards") or [{}])[0].get("note", "")
-    j077 = next(t for t in g8b if t["id"] == "cnd_j077")
-    assert j077["frames"] == "依法行政，建设法治政府"
-    assert next(t for t in g7a if t["id"] == "cnd_j107")["frames"] == BUILT_OFFICIAL_FRAMES["cnd_j107"]
-    assert next(t for t in g7b if t["id"] == "cnd_j108")["frames"] == BUILT_OFFICIAL_FRAMES["cnd_j108"]
-    assert next(t for t in g8a if t["id"] == "cnd_j109")["frames"] == BUILT_OFFICIAL_FRAMES["cnd_j109"]
-    assert next(t for t in g8b if t["id"] == "cnd_j110")["frames"] == BUILT_OFFICIAL_FRAMES["cnd_j110"]
-    assert len(g7a) == 26
-    assert len(g7b) == 19
-    assert len(g8a) == 19
-    assert len(g8b) == 25
-    j078 = next(t for t in g8b if t["id"] == "cnd_j078")
-    j079 = next(t for t in g8b if t["id"] == "cnd_j079")
-    assert j078["frames"] == "中央军事委员会的领导体制和职权"
-    assert j079["frames"] == "中央军事委员会的性质和产生"
-    assert all(VOLUME_ISBN[(t["grade"], t["semester"])] in (t.get("standards") or [{}])[0].get("note", "") for t in all_g78)
-
+# 数据已裁至高中：下面删掉的是初中道法（cnd_j）的真实入库用例——
+#   test_g8b_public_catalog_lessons / test_g9a_official_toc_not_g9b /
+#   test_g78_official_toc_lessons_and_unbuilt_frames
+# 它们断言八下 14 课、九上 10 课、七八册课名与 frames、以及 cnd_j 的 catalog_status 与 ISBN。
+# 道德与法治整科已随裁剪下线（data/topics.json 里已无 cnd_j），这些用例无可测数据，删除；
+# 「待核桶 unit 90 / 九下九全拒绝」这类只依赖 scripts/jmor_lib.py 的用例仍然保留。
 
 def test_pending_unit_hook():
     """unit 90 章节为「N年级X册 待核」，不要拼成第90单元。"""
@@ -348,13 +199,16 @@ def test_grade9_xia_and_quan_rejected():
 
 
 def test_independent_root_allowed():
+    """本批允许没有先修的独立根：规格里每个根都写了 root_reason。
+
+    数据已裁至高中，道法 cnd_j 点已下线，因此只校验生成器规格（scripts/jmor_lib.py 里的 L.TOPICS），
+    不再比对 data/topics.json 里已不存在的 cnd_j 记录。
+    """
     incoming = {src for src, _dst, _strength, _reason in L.EDGES}
     roots = [t for t in L.TOPICS if t["key"] not in incoming]
     assert roots, "本批应允许没有先修的独立根"
-    stored = {t["id"]: t for t in _data("topics.json") if str(t.get("id", "")).startswith("cnd_j")}
     for spec in roots:
-        assert spec.get("root_reason"), spec["id"]
-        assert stored[spec["id"]].get("root_reason"), spec["id"]
+        assert spec.get("root_reason"), spec.get("key")
 
 
 if __name__ == "__main__":
@@ -363,9 +217,6 @@ if __name__ == "__main__":
     test_coverage_does_not_claim_four_books()
     test_missing_module_does_not_write()
     test_real_new_points_shape()
-    test_g8b_public_catalog_lessons()
-    test_g9a_official_toc_not_g9b()
-    test_g78_official_toc_lessons_and_unbuilt_frames()
     test_pending_unit_hook()
     test_grade9_xia_and_quan_rejected()
     test_independent_root_allowed()

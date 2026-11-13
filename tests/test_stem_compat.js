@@ -57,10 +57,19 @@ function tinyGraph(questions) {
   return Engine.buildGraph(topics, [], questions);
 }
 
-test('夹具题干与 StemCompat.RETIRED / CURRENT 对齐，且现行题库已是语气', () => {
+test('夹具题干与 StemCompat.RETIRED / CURRENT 对齐；语文已下线时不再比对现网题干', () => {
   const byId = Object.fromEntries(fixture.questions.map((q) => [q.id, q]));
   assert.equal(byId.cnc_p124_q3.prompt, StemCompat.RETIRED.cnc_p124_q3);
   assert.equal(byId.cnc_p124_q4.prompt, StemCompat.RETIRED.cnc_p124_q4);
+  assert.deepEqual(Object.keys(StemCompat.CURRENT).sort(), ['cnc_p124_q3', 'cnc_p124_q4']);
+  assert.notEqual(StemCompat.CURRENT.cnc_p124_q3, StemCompat.RETIRED.cnc_p124_q3);
+  assert.notEqual(StemCompat.CURRENT.cnc_p124_q4, StemCompat.RETIRED.cnc_p124_q4);
+  // 数据已裁至高中：语文 cnc_p124（二年级下册语文园地一）随裁剪下线，现网题库里已没有这四题。
+  // 只有在题库里还能找到 cnc_p124 时才比对现行题干（保留原断言的强度，数据回填后自动生效）。
+  if (!liveQuestions.length) {
+    assert.equal(liveQuestions.length, 0);
+    return;
+  }
   const live = Object.fromEntries(liveQuestions.map((q) => [q.id, q]));
   assert.equal(live.cnc_p124_q3.prompt, StemCompat.CURRENT.cnc_p124_q3);
   assert.equal(live.cnc_p124_q4.prompt, StemCompat.CURRENT.cnc_p124_q4);
@@ -96,7 +105,8 @@ test('无 prompt 的旧 session：排除 q3/q4，q1/q2 保留；过滤回放不�
   assert.equal(prepared.excluded[0].qid, 'cnc_p124_q3');
   assert.equal(prepared.excluded[0].prompt, StemCompat.RETIRED.cnc_p124_q3);
 
-  const graph = tinyGraph(liveQuestions);
+  // 数据已裁至高中：现网题库已无 cnc_p124，回放用夹具里的四道题作图（结构与当时一致）。
+  const graph = tinyGraph(fixture.questions);
   const raw = Engine.replay(graph, ['cnc_p124'], answers, { confirm: 3, limit: 10, seed: 1 });
   assert.equal(Engine.statusOf(raw, 'cnc_p124'), 'mastered');
 
@@ -174,7 +184,7 @@ test('盲区：无戳旧结论与无 prompt 旧错题不计入语气薄弱；新
     weak: ['cnc_p124'], shaky: [], mastered: [], roots: ['cnc_p124'],
     answers: [
       { id: 'cnc_p124', qid: 'cnc_p124_q3', result: 'wrong', prompt: StemCompat.CURRENT.cnc_p124_q3 },
-      { id: 'cnc_p124', qid: 'cnc_p124_q1', result: 'wrong', prompt: liveQuestions.find((q) => q.id === 'cnc_p124_q1').prompt }
+      { id: 'cnc_p124', qid: 'cnc_p124_q1', result: 'wrong', prompt: fixture.questions.find((q) => q.id === 'cnc_p124_q1').prompt }
     ]
   });
   const fresh = api.list({ subject: 'chinese' });
