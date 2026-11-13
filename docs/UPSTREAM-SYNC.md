@@ -62,6 +62,9 @@ scripts/sync_upstream.sh --apply     # 真同步（仍然不推送）
 - ✗ 改 `vercel.json` 的 `headers` / `trailingSlash` —— 线上缓存与 404 行为依赖它
 - ✗ 改 `scripts/build_hs_subset.py` 的筛选规则（`KEEP_PREFIX={cnm,cnp,cnk}`、`MIN_GRADE=10`）—— 那是产品定义，必须单独提 PR
 
+> 备注：`--check` 会补上 `upstream` remote（这是设计的一部分）。之后 `gh` 可能把默认仓库解析成上游，
+> 跑 `gh pr ...` 时请显式带 `--repo oioilu/cn-math-taxonomy`，否则会看到上游的 PR 列表。
+
 ---
 
 ## 3. 同步之后必做（人工闭环，5 步）
