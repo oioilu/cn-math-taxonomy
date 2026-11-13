@@ -9,7 +9,7 @@
 > | 题目 | 2,200 |
 > | 年级 | 10–15（高一 ~ 选必） |
 >
-> - **站点**：<https://study.oioi.lu>（Vercel 静态部署，纯前端、零构建）
+> - **站点**：私人自建站点（Vercel 静态部署，纯前端、零构建），地址不公开
 > - **裁剪脚本**：`scripts/build_hs_subset.py`
 >   - 规则：id 前缀 ∈ `{cnm, cnp, cnk}` 且 `grade >= 10`；先修边两端都被保留才留；题目按 `topicId` 过滤；课标表整表保留
 >   - 复现：先从基线还原原始数据（`git show 548320e:data/topics.json > data/topics.json`，另两个同理），再 `python3 scripts/build_hs_subset.py`
