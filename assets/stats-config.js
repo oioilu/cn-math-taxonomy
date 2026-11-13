@@ -3,8 +3,8 @@
 window.CNM_STATS = {
   // Cloudflare Web Analytics 的 token（站点的统计信标）。填了才会加载 Cloudflare 的信标脚本。
   cloudflareToken: '',
-  // 自建事件采集地址（https://…）。填了就用 sendBeacon 把事件以 JSON POST 过去。
-  endpoint: 'https://math-pansgo-stats.xiaokunfeng310.workers.dev/collect',
+  // 自建事件采集地址（https://…）。留空：本站不上报任何访客事件。
+  endpoint: '',
   // 可选回调：每个事件都会调用一次，参数是 { event, source, path, ts, ... }。
   onEvent: null
 };

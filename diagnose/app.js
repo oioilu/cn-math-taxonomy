@@ -16,7 +16,6 @@
   const LS_SEEN = 'cnmDiagnose.seen.v1';
   const LIMIT_MIN = 8, LIMIT_MAX = 30;
   const SCREEN_MIN = 20, SCREEN_MAX = 60;
-  const GRADES = '一二三四五六七八九'.split('');
   const VOLUMES = [
     ['一上', '一年级上册'], ['一下', '一年级下册'], ['二上', '二年级上册'], ['二下', '二年级下册'],
     ['三上', '三年级上册'], ['三下', '三年级下册'], ['四上', '四年级上册'], ['四下', '四年级下册'],
@@ -186,8 +185,6 @@
     }
     if (subject === 'physics') {
       document.title = '诊断 · 物理';
-      if (gradeSel !== '八' && gradeSel !== '九' && !/^(必修[一二三]|选必[一二三])$/.test(gradeSel)) gradeSel = '八';
-      if (gradeSel === '九') volSel = '全';
     }
     if (subject === 'science') {
       document.title = '诊断 · 高中知识图谱';
@@ -216,8 +213,11 @@
     }
     if (subject === 'chemistry') {
       document.title = '诊断 · 化学';
-      if (gradeSel !== '九' && !/^(必修[一二]|选必[一二三]|选择性必修第[一二三]册)$/.test(gradeSel)) gradeSel = '九';
-      if (volSel === '全') volSel = '';
+    }
+    if (subject === 'math' || subject === 'physics' || subject === 'chemistry') {
+      // 高中三科：年级行只留数据里有的册次，默认落在第一个有数据的册（初值 '七' 在这里被换掉）。
+      syncHsGradeSel();
+      volSel = '';
     }
     if (subject === 'chinese') {
       document.title = '诊断 · 语文';
@@ -673,6 +673,34 @@
   function seniorGrade(sel) {
     return sel === '高一' || sel === '高二' || String(sel).indexOf('选必') === 0 || String(sel).indexOf('必修') === 0;
   }
+  /* 高中三科的册次标签：topics.json 里的年级数字 → 册次标签。站点只保留高中部分。 */
+  const HS_VOLUME_LABELS = {
+    math: { 10: '高一', 11: '高二', 12: '选必一', 13: '选必二', 14: '选必三' },
+    physics: { 10: '必修一', 11: '必修二', 12: '必修三', 13: '选必一', 14: '选必二', 15: '选必三' },
+    chemistry: { 10: '必修一', 11: '必修二', 12: '选必一', 13: '选必二', 14: '选必三' }
+  };
+  /* 年级行只按 data/topics.json 里实际存在的册次生成：不硬编码清单，数据里没有的册不画按钮。
+   * 返回 [[册次, 显示文字], …]；非高中三科或还没有数据时返回 null，交给原来的分支。 */
+  function hsVolumeTabs(sub) {
+    const map = HS_VOLUME_LABELS[sub];
+    if (!map || !D || !Array.isArray(D.topics)) return null;
+    const seen = Object.create(null);
+    const out = [];
+    D.topics.forEach(function (t) {
+      if (!t || t.external) return;
+      const label = map[t.grade];
+      if (!label || seen[label]) return;
+      seen[label] = true;
+      out.push([label, label]);
+    });
+    return out.length ? out : null;
+  }
+  /* 选中项收敛到「有数据的册」：初值 '七' 或上一科的册次在本科不存在时，落到第一个有数据的册。 */
+  function syncHsGradeSel() {
+    const list = hsVolumeTabs(subject) || [];
+    if (!list.some(function (it) { return it[0] === gradeSel; })) gradeSel = list.length ? list[0][0] : '';
+    return list;
+  }
   function seniorRangeLabel(sel) { return String(sel).indexOf('选必') === 0 ? '整册' : '必修整册'; }
   function gradeScope() {
     if (seniorGrade(gradeSel)) return gradeSel;
@@ -685,6 +713,8 @@
     const box = h('div', { class: 'card', id: 'grade-card' });
     const fill = function () {
       while (box.firstChild) box.removeChild(box.firstChild);
+      // 高中三科：年级行跟着 topics.json 实际有的册次走，选中项先收敛到有数据的册。
+      const hsTabs = HS_VOLUME_LABELS[subject] ? syncHsGradeSel() : null;
       const g = E.gradeTargets(D.graph, gradeScope(), subject);
       const tabs = function (label, items, current, set) {
         return h('div', { class: 'stage-tabs', role: 'tablist', 'aria-label': label }, items.map(function (it) {
@@ -708,8 +738,10 @@
       box.append(
         h('h2', { text: '按年级整体诊断' }),
         h('p', { class: 'muted' }, '本测评检查本年级知识点是否掌握，不是竞赛拔高。按「基础 / 提高 / 拓展」出题：先出提高题，答对再出拓展题确认掌握；答错会先补基础题，仍错会回到前面年级的相关知识点。每个知识点连续答对 ' + getSettings().confirm + ' 题才算掌握（可在上方改），最后按章汇总出哪几章薄弱。适合期初摸底、学期末复习。'),
-        tabs('年级', subject === 'physics'
-          ? [['八', '八年级'], ['九', '九年级'], ['必修一', '必修一'], ['必修二', '必修二'], ['必修三', '必修三'],
+        tabs('年级', hsTabs
+          ? hsTabs
+          : subject === 'physics'
+          ? [['必修一', '必修一'], ['必修二', '必修二'], ['必修三', '必修三'],
             ['选必一', '选必一'], ['选必二', '选必二'], ['选必三', '选必三']]
           : subject === 'english'
           ? '三四五六七八九'.split('').map(function (x) { return [x, x + '年级']; }).concat([
@@ -721,7 +753,7 @@
           : subject === 'geography' || subject === 'biology'
           ? '七八'.split('').map(function (x) { return [x, x + '年级']; })
           : subject === 'chemistry'
-          ? [['九', '九年级'], ['必修一', '必修一'], ['必修二', '必修二'], ['选必一', '选必一'], ['选必二', '选必二'], ['选必三', '选必三']]
+          ? [['必修一', '必修一'], ['必修二', '必修二'], ['选必一', '选必一'], ['选必二', '选必二'], ['选必三', '选必三']]
           : subject === 'chinese'
           ? '一二三四五六七八九'.split('').map(function (x) { return [x, x + '年级']; })
           : subject === 'science'
@@ -731,9 +763,7 @@
             var gnum = '一二三四五六七八九'.indexOf(x) + 1;
             return D.topics.some(function (t) { return t.grade === gnum; });
           }).map(function (x) { return [x, x + '年级']; })
-          : GRADES.map(function (x) { return [x, x + '年级']; }).concat([
-            ['高一', '高一'], ['高二', '高二'], ['选必一', '选必一'], ['选必二', '选必二'], ['选必三', '选必三']
-          ]), gradeSel, function (v) {
+          : [['高一', '高一'], ['高二', '高二'], ['选必一', '选必一'], ['选必二', '选必二'], ['选必三', '选必三']], gradeSel, function (v) {
           gradeSel = v;
           if (seniorGrade(v)) volSel = '';
           else if (subject === 'physics' && v === '九') volSel = '全';
