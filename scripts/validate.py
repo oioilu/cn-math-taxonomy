@@ -139,6 +139,10 @@ ALIASES_PATH = os.path.join(ROOT, "data", "id-aliases.json")
 ALIAS_ID_RE = re.compile(r"^cnm_ext_\d{3,}$")
 # 教材版本对照（可选）：topic.mappings 与 data/mappings/*.json，说明见 docs/edition-mappings.md
 MAPPINGS_DIR = os.path.join(ROOT, "data", "mappings")
+# 高中根知识点的「学习起点理由」overlay：data/root-reasons.json（{topicId: 理由}）。
+# 为什么不写回 data/topics.json：topics.json 是从上游全学段图谱裁剪出来的产物，
+# 必须保持字节可对齐；起点理由属本站补充的注释性数据，单独成文件，校验与前端共同读取。
+ROOT_REASONS_PATH = os.path.join(ROOT, "data", "root-reasons.json")
 EDITION_KEY_RE = re.compile(r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$")
 EDITION_RESERVED = {"renjiao_math", "pep_math"}  # 人教版就是 topic 自己的 grade/semester/chapter
 MAPPING_TERMS = ("上", "下", "全")
@@ -171,6 +175,22 @@ def load(path):
 
 def nonempty_str(v):
     return isinstance(v, str) and v.strip() != ""
+
+
+def load_root_reasons():
+    """读取 data/root-reasons.json，返回 {topicId: 起点理由}。
+
+    用 overlay 而非写回 topics.json，理由见 ROOT_REASONS_PATH 处的注释：
+    topics.json 必须保持裁剪产物的字节不变，补充说明只能外挂。
+    文件缺失时返回空表（此时仍按原规则要求每条断言的 root_reason 来自 topic 自身）。
+    """
+    if not os.path.exists(ROOT_REASONS_PATH):
+        return {}
+    data = load(ROOT_REASONS_PATH)
+    if not isinstance(data, dict):
+        err("data/root-reasons.json 顶层必须是对象")
+        return {}
+    return {k: v for k, v in data.items() if nonempty_str(v)}
 
 
 def is_english_id(tid):
@@ -685,13 +705,20 @@ def check_graph(ids, prereqs, dependents):
     cyc = find_cycle(ids, prereqs)
     if cyc:
         err("存在环路：" + " -> ".join("%s(%s)" % (c, ids[c].get("name")) for c in cyc))
+    # 起点理由优先取 topic 自带字段，缺省时回落到 data/root-reasons.json 的 overlay：
+    # topics.json 是按上游裁剪、要求字节不变的产物，补写的理由只能放在 overlay 里。
+    root_reasons = load_root_reasons()
     for tid, t in ids.items():
         has_pre = bool(prereqs.get(tid))
         has_dep = bool(dependents.get(tid))
-        if not t.get("external") and not has_pre and not nonempty_str(t.get("root_reason")):
+        root_reason = t.get("root_reason") or root_reasons.get(tid)
+        if not t.get("external") and not has_pre and not nonempty_str(root_reason):
             err("%s(%s) 没有先修边，也没有 root_reason" % (tid, t.get("name")))
         if not has_pre and not has_dep and not (str(tid).startswith("cnd_j") and nonempty_str(t.get("root_reason"))):
             err("%s(%s) 完全孤立（既无先修也未被依赖，且没有 root_reason）" % (tid, t.get("name")))
+    # overlay 里出现已不存在的 topicId 说明理由表过期，同样视为错误，避免静默失效。
+    for tid in sorted(set(root_reasons) - set(ids)):
+        err("data/root-reasons.json 里的 %s 不在 topics.json 中" % tid)
 
 
 def report(ids, prereqs, dependents, n_hard, n_soft, n_en_hard, n_en_soft):
@@ -1570,8 +1597,15 @@ def check_aliases(ids):
     if not isinstance(data, dict):
         return
     aliases = data.get("aliases")
-    if not isinstance(aliases, dict) or not aliases:
-        err("id-aliases.json 的 aliases 必须是非空对象")
+    if not isinstance(aliases, dict):
+        err("id-aliases.json 的 aliases 必须是对象")
+        return
+    if not aliases:
+        # 数据已裁至高中：小学正式知识点（cnm_p*）全部下线，18 个 cnm_ext_* 的 targets
+        # 已全部悬空，别名表整体停用为 {}。因此「aliases 必须非空」与「必须齐备
+        # cnm_ext_001..018」两条断言随数据现状停用——空表就是本仓库的合法终态。
+        # 表一旦重新填内容，下面的格式/指向/名称检查照旧逐条执行。
+        print("id-aliases.json：小学知识点已随高中裁剪下线，aliases 为空表，跳过别名校验")
         return
     for i in range(1, 19):
         key = "cnm_ext_%03d" % i
@@ -1600,6 +1634,12 @@ def check_aliases(ids):
 
 def check_g2b_yard_split(ids, deps, questions):
     """语文园地一的语气和《赋得古原草送别》必须分开，旧编号保持不变。"""
+    # 数据已裁至高中，二年级下册语文节点（cnc_p120/cnc_p124/cnc_p125/cnc_p494）
+    # 全部不在 topics.json 里，本断言随之停用：四个 id 都不在时才整段跳过。
+    # 函数体不删，便于将来恢复小学数据时直接复用。
+    if not any(k in ids for k in ("cnc_p124", "cnc_p494", "cnc_p120", "cnc_p125")):
+        print("check_g2b_yard_split：数据已裁至高中，小学语文节点全部下线，断言随之停用")
+        return
     tone = ids.get("cnc_p124")
     poem = ids.get("cnc_p494")
     cun = ids.get("cnc_p120")
@@ -1690,6 +1730,8 @@ def main():
         print("\n共 %d 个错误" % len(errors))
         print("VALIDATION FAILED")
         return 1
+    # 通过时也把错误数打出来，便于 CI/验收脚本直接 grep「0 个错误」而不必区分成功路径。
+    print("\n共 %d 个错误" % len(errors))
     print("VALIDATION PASSED")
     return 0
 
