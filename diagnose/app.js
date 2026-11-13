@@ -190,7 +190,7 @@
       if (gradeSel === '九') volSel = '全';
     }
     if (subject === 'science') {
-      document.title = '诊断 · 小学科学';
+      document.title = '诊断 · 高中知识图谱';
       if ('一二三四五六'.indexOf(gradeSel) < 0) gradeSel = '一';
       if (volSel === '全') volSel = '';
     }
@@ -645,14 +645,10 @@
         ? '选一个想学会或想检查的化学知识点。' + confirmHelp
         : '选一个想学会或想检查的知识点。' + confirmHelp),
       h('div', { class: 'stage-tabs', role: 'tablist', 'aria-label': '学段' },
-        subject === 'physics' || subject === 'chemistry' ? [stageButton('', '全部'), stageButton('j', '初中'), stageButton('h', '高中')]
-          : subject === 'history' || subject === 'geography' || subject === 'biology' ? [stageButton('', '全部'), stageButton('j', '初中')]
-          : subject === 'chinese' || subject === 'morality' ? [stageButton('', '全部'), stageButton('p', '小学'), stageButton('j', '初中')]
-          : subject === 'science' ? [stageButton('', '全部'), stageButton('p', '小学')]
-          : [stageButton('', '全部'), stageButton('p', '小学'), stageButton('j', '初中'), stageButton('h', '高中')]),
+        [stageButton('', '全部'), stageButton('h', '高中')]),
       h('input', {
         type: 'search', class: 'search-lg', id: 'search',
-        placeholder: subject === 'physics' ? '搜索知识点，例如：欧姆定律、浮力、牛顿第二定律、楞次定律' : subject === 'english' ? '搜索知识点，例如：现在进行时、虚拟语气、there is' : subject === 'chinese' ? '搜索知识点，例如：声母、静夜思、春、岳阳楼记' : subject === 'science' ? '搜索知识点，例如：溶解、电路、昼夜交替' : subject === 'morality' ? '搜索知识点，例如：升国旗、排队、宪法、节约用水' : subject === 'history' ? '搜索知识点，例如：鸦片战争、丝绸之路、五四运动' : subject === 'geography' ? '搜索知识点，例如：经纬网、季风气候、长江' : subject === 'biology' ? '搜索知识点，例如：细胞、光合作用、基因' : subject === 'chemistry' ? '搜索知识点，例如：氧气、质量守恒定律、物质的量、氧化还原' : '搜索知识点，例如：配方法、20 以内加法、一次函数',
+        placeholder: subject === 'physics' ? '搜索知识点，例如：欧姆定律、浮力、牛顿第二定律、楞次定律' : subject === 'english' ? '搜索知识点，例如：现在进行时、虚拟语气、there is' : subject === 'chinese' ? '搜索知识点，例如：声母、静夜思、春、岳阳楼记' : subject === 'science' ? '搜索知识点，例如：溶解、电路、昼夜交替' : subject === 'morality' ? '搜索知识点，例如：升国旗、排队、宪法、节约用水' : subject === 'history' ? '搜索知识点，例如：鸦片战争、丝绸之路、五四运动' : subject === 'geography' ? '搜索知识点，例如：经纬网、季风气候、长江' : subject === 'biology' ? '搜索知识点，例如：细胞、光合作用、基因' : subject === 'chemistry' ? '搜索知识点，例如：氧气、质量守恒定律、物质的量、氧化还原' : '搜索知识点，例如：集合、导数、牛顿第二定律、物质的量',
         value: startQuery, autocomplete: 'off', 'aria-label': '搜索知识点',
         oninput: function (e) {
           startQuery = e.target.value;
@@ -1071,7 +1067,7 @@
     }
     var now = new Date();
     return {
-      siteName: '中小学·高中知识图谱',
+      siteName: '高中知识图谱',
       subject: subjectName,
       scope: shareScopeText(),
       mastered: sum.mastered.length,
@@ -1297,14 +1293,6 @@
 
     page.append(standardsCard(sum));
     page.append(logCard());
-    page.append(h('p', { class: 'iq-line', id: 'iq-line' },
-      '做完数学诊断，再测测思维能力？→ ',
-      h('a', {
-        href: 'https://test.pansgo.com/?from=math-result',
-        target: '_blank',
-        rel: 'noopener',
-        text: '儿童智商测试'
-      })));
     show(page);
     mountPathGraph(sum);
   }

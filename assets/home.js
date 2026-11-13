@@ -37,7 +37,7 @@
     if (next && next !== href) link.setAttribute('href', next);
   });
   if (subject === 'english') {
-    document.title = '英语 · 中小学·高中知识图谱';
+    document.title = '英语 · 高中知识图谱';
     var eye = document.querySelector('.eyebrow');
     if (eye) eye.textContent = '英语：三年级到高中';
     var primary = document.querySelector('.hero-actions a.btn-primary');
@@ -50,7 +50,7 @@
       demo.textContent = '先看一遍演示：四年级上册英语';
     }
   } else if (subject === 'physics') {
-    document.title = '物理 · 中小学·高中知识图谱';
+    document.title = '物理 · 高中知识图谱';
     var peye = document.querySelector('.eyebrow');
     if (peye) peye.textContent = '物理：初中八、九年级 · 高中必修与选择性必修';
     var pprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -63,7 +63,7 @@
       pdemo.textContent = '先看一遍演示：八年级上册物理';
     }
   } else if (subject === 'chinese') {
-    document.title = '语文 · 中小学·高中知识图谱';
+    document.title = '语文 · 高中知识图谱';
     var zeye = document.querySelector('.eyebrow');
     if (zeye) zeye.textContent = '语文：小学一至六年级 · 初中七至九年级 · 统编版';
     var zprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -76,7 +76,7 @@
       zdemo.textContent = '先看一遍演示：一年级上册语文';
     }
   } else if (subject === 'science') {
-    document.title = '小学科学 · 中小学·高中知识图谱';
+    document.title = '小学科学 · 高中知识图谱';
     var seye = document.querySelector('.eyebrow');
     if (seye) seye.textContent = '科学：小学一至六年级 · 教科版';
     var sprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -89,7 +89,7 @@
       sdemo.textContent = '先看一遍演示：一年级上册科学';
     }
   } else if (subject === 'morality') {
-    document.title = '道德与法治 · 中小学·高中知识图谱';
+    document.title = '道德与法治 · 高中知识图谱';
     var meye = document.querySelector('.eyebrow');
     if (meye) meye.textContent = '道德与法治：小学与初中 · 统编版 · 只列出已录入册次';
     var mprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -102,7 +102,7 @@
       mdemo.textContent = '先看一遍演示：一年级上册道德与法治';
     }
   } else if (subject === 'history') {
-    document.title = '初中历史 · 中小学·高中知识图谱';
+    document.title = '初中历史 · 高中知识图谱';
     var heye = document.querySelector('.eyebrow');
     if (heye) heye.textContent = '历史：初中七至九年级 · 统编版';
     var hprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -115,7 +115,7 @@
       hdemo.textContent = '先看一遍演示：七年级上册历史';
     }
   } else if (subject === 'geography') {
-    document.title = '初中地理 · 中小学·高中知识图谱';
+    document.title = '初中地理 · 高中知识图谱';
     var geye = document.querySelector('.eyebrow');
     if (geye) geye.textContent = '地理：初中七至八年级 · 人教版';
     var gprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -128,7 +128,7 @@
       gdemo.textContent = '先看一遍演示：七年级上册地理';
     }
   } else if (subject === 'biology') {
-    document.title = '初中生物 · 中小学·高中知识图谱';
+    document.title = '初中生物 · 高中知识图谱';
     var beye = document.querySelector('.eyebrow');
     if (beye) beye.textContent = '生物：初中七至八年级 · 人教版';
     var bprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -141,7 +141,7 @@
       bdemo.textContent = '先看一遍演示：七年级上册生物';
     }
   } else if (subject === 'chemistry') {
-    document.title = '化学 · 中小学·高中知识图谱';
+    document.title = '化学 · 高中知识图谱';
     var ceye = document.querySelector('.eyebrow');
     if (ceye) ceye.textContent = '化学：初中九年级 · 高中必修第一、二册和选择性必修第一、二、三册 · 人教版';
     var cprimary = document.querySelector('.hero-actions a.btn-primary');
@@ -378,7 +378,7 @@
       var up = list.filter(function (topic) { return topic.semester === '上'; }).length;
       var down = list.filter(function (topic) { return topic.semester === '下'; }).length;
       var whole = list.filter(function (topic) { return topic.semester === '全'; }).length;
-      if (subject === 'morality' && !list.length) continue;
+      if (!list.length) continue;
       var splitText = whole ? '全一册 ' + whole : '上 ' + up + ' · 下 ' + down;
       if (subject === 'morality' && !whole) {
         var morParts = [];

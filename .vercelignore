@@ -6,3 +6,4 @@ tests
 docs
 node_modules
 *.log
+data/_orig/
