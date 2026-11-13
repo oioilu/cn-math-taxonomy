@@ -7,3 +7,9 @@ docs
 node_modules
 *.log
 data/_orig/
+# 上游内部文件与批次/二校留档：留在仓库里备份，但不上传到站点（避免公开上游工作文件）
+data/_second_pass
+data/_qbatches
+data/_distractor_changelog.json
+# 教材版本对照：裁剪到高中后没有可保留的对照条目（见 docs/edition-mappings.md），不上传
+data/mappings

@@ -334,7 +334,20 @@
     setText('n-topics', String(topics.length));
     setText('n-edges', String(deps.length));
     setText('n-questions', '…');
-    setText('n-standards', String(items.length));
+    /* 课标条目：只统计本站保留知识点真正引用到的条数（按学科去重）。
+     * 旧口径把整张课标表按学科前缀过滤，含已裁掉的小学初中条款，数字远大于在用的条目。 */
+    var stdAllowed = {};
+    items.forEach(function (item) { stdAllowed[item.id] = true; });
+    var stdInUse = {};
+    topics.forEach(function (topic) {
+      (topic.standards || []).forEach(function (entry) {
+        var sid = entry && entry.id;
+        if (sid && stdAllowed[sid]) stdInUse[sid] = true;
+      });
+    });
+    var stdCount = Object.keys(stdInUse).length;
+    // 数据里一条都没引用（旧学科或测试夹具）时退回整表条数，避免把 0 当成真值显示。
+    setText('n-standards', String(stdCount || items.length));
 
     /* 题库较大，单独加载，不挡统计和年级入口；失败只把题目数显示成 — */
     var qToken = homeLoadToken;

@@ -128,64 +128,13 @@ def test_build_source_copies_classification():
     assert before == after, "导入 enj_build 不应写回 data/"
 
 
-def test_data_marks_match_spec_and_leave_mounts():
-    topics = _load("topics.json")
-    by_id = {t["id"]: t for t in topics}
-    core = []
-    for tid, rec in sorted(P.BY_ID.items()):
-        topic = by_id[tid]
-        vol = P._volume(tid)
-        grade, semester, chapter = VOL_CHAPTER[vol]
-        assert topic["name"] == rec["name"]
-        assert topic["grade"] == grade
-        assert topic["semester"] == semester
-        assert topic["chapter"] == chapter
-        assert topic["catalog_status"] == rec["catalog_status"]
-        assert topic["catalog_note"] == rec["catalog_note"]
-        assert topic["catalog_status"] not in P.MORALITY_STATUS
-        assert "第90单元" not in topic["chapter"]
-        core.append({
-            "id": topic["id"],
-            "name": topic["name"],
-            "description": topic["description"],
-            "grade": topic["grade"],
-            "semester": topic["semester"],
-            "chapter": topic["chapter"],
-            "domain": topic["domain"],
-            "type": topic["type"],
-        })
-    assert _sha(core) == CORE_SHA
-    extra = [
-        t["id"] for t in topics
-        if str(t.get("id", "")).startswith("cne_") and "catalog_status" in t and t["id"] not in P.BY_ID
-    ]
-    assert extra == []
-    pending = [
-        t["id"] for t in topics
-        if str(t.get("id", "")).startswith("cne_j") and str(t.get("chapter", "")).endswith(" 待核")
-    ]
-    assert set(pending) == set(P.BY_ID)
-
-
-def test_questions_and_edges_unchanged():
-    ids = set(P.BY_ID)
-    questions = [q for q in _load("questions.json") if q.get("topicId") in ids]
-    assert len(questions) == 65 * 4
-    assert _sha(questions) == QUESTION_SHA
-    edges = [
-        e for e in _load("dependencies.json")
-        if e.get("topicId") in ids or e.get("prerequisiteId") in ids
-    ]
-    assert _sha(edges) == EDGE_SHA
-
-
-def test_morality_catalog_status_unchanged():
-    rows = [(t["id"], t.get("catalog_status")) for t in _load("topics.json") if str(t.get("id", "")).startswith("cnd_j")]
-    assert rows
-    assert _sha(rows) == MORALITY_SHA
-    for tid, status in rows:
-        assert status in P.MORALITY_STATUS, tid
-        assert status not in P.ALLOWED_STATUS
+# 数据已裁至高中：下面删掉的是三个读 data/topics.json 的初中英语用例——
+#   test_data_marks_match_spec_and_leave_mounts（65 个 cne_j 待核点的标记与章节）
+#   test_questions_and_edges_unchanged（65*4 道英语题 + 英语边的 sha 锁定）
+#   test_morality_catalog_status_unchanged（cnd_j 的 catalog_status sha 锁定）
+# 小学/初中英语（cne_*）与初中道法（cnd_j）已随裁剪下线，data/ 里已没有这些点与题，
+# 这三个用例无可测数据，删除；生成器规格本身的一致性由 test_spec_covers_generator_unit_90 /
+# test_attach_keeps_been_gone_wording / test_build_source_copies_classification / test_doc_matches_spec 继续覆盖。
 
 
 def test_doc_matches_spec():
@@ -236,11 +185,8 @@ def main():
     test_spec_covers_generator_unit_90()
     test_attach_keeps_been_gone_wording()
     test_build_source_copies_classification()
-    test_data_marks_match_spec_and_leave_mounts()
-    test_questions_and_edges_unchanged()
-    test_morality_catalog_status_unchanged()
     test_doc_matches_spec()
-    print("ok 7")
+    print("ok 4")
     return 0
 
 

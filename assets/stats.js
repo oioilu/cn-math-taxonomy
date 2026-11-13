@@ -23,13 +23,13 @@
     if (props) Object.keys(props).forEach(function (k) { ev[k] = props[k]; });
     try { window.dispatchEvent(new CustomEvent('cnm:track', { detail: ev })); } catch (e) { /* ignore */ }
     try { if (typeof cfg.onEvent === 'function') cfg.onEvent(ev); } catch (e) { /* ignore */ }
-    if (cfg.endpoint) {
-      try {
-        var body = JSON.stringify(ev);
-        if (navigator.sendBeacon) navigator.sendBeacon(cfg.endpoint, new Blob([body], { type: 'text/plain;charset=UTF-8' }));
-        else fetch(cfg.endpoint, { method: 'POST', body: body, keepalive: true, mode: 'no-cors' }).catch(function () { /* ignore */ });
-      } catch (e) { /* ignore */ }
-    }
+    // endpoint 为空 ⇒ 不发任何请求（本地事件和 onEvent 回调照旧，页面自己还能用）。
+    if (!cfg.endpoint) return;
+    try {
+      var body = JSON.stringify(ev);
+      if (navigator.sendBeacon) navigator.sendBeacon(cfg.endpoint, new Blob([body], { type: 'text/plain;charset=UTF-8' }));
+      else fetch(cfg.endpoint, { method: 'POST', body: body, keepalive: true, mode: 'no-cors' }).catch(function () { /* ignore */ });
+    } catch (e) { /* ignore */ }
   }
   window.cnmTrack = track;
 

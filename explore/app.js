@@ -1356,6 +1356,22 @@
     } catch (e) { /* 题库读不到时，样题只显示原来的文字 */ }
   }
 
+  /* data/root-reasons.json 可选：给还没有 root_reason 的根知识点补一句「为什么它可以单独学」。
+   * 文件缺失（404）或格式不对时静默跳过，不影响详情页其它内容。 */
+  async function loadRootReasons(list) {
+    try {
+      var response = await fetch('../data/root-reasons.json');
+      if (!response.ok) return;
+      var map = await response.json();
+      if (!map || typeof map !== 'object' || Array.isArray(map)) return;
+      list.forEach(function (topic) {
+        if (topic.root_reason) return;
+        var reason = map[topic.id];
+        if (typeof reason === 'string' && reason.trim()) topic.root_reason = reason;
+      });
+    } catch (e) { /* 读不到就按没有 root_reason 处理 */ }
+  }
+
   async function load() {
     var files = ['topics.json', 'dependencies.json', 'id-aliases.json', 'cn-curriculum-standards.json'];
     var responses = await Promise.all(files.map(function (file) { return fetch('../data/' + file); }));
@@ -1373,6 +1389,7 @@
     deps = json[1].filter(function (edge) { return allow[edge.topicId] && allow[edge.prerequisiteId]; });
     aliases = (json[2] && json[2].aliases) || {};
     (json[3].items || []).forEach(function (item) { stdById.set(item.id, item); });
+    await loadRootReasons(topics);
     topics.forEach(function (topic, topicIndex) {
       byId.set(topic.id, topic);
       indexOf.set(topic.id, topicIndex);

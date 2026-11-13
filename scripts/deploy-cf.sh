@@ -34,6 +34,10 @@ cp "$ROOT/data/topics.json" \
    "$ROOT/data/questions.json" \
    "$ROOT/data/id-aliases.json" \
    "$DIST/data/"
+# root-reasons.json 是可选的「为什么它可以单独学」补充；还没建好时不复制，也不影响部署。
+if [[ -f "$ROOT/data/root-reasons.json" ]]; then
+  cp "$ROOT/data/root-reasons.json" "$DIST/data/"
+fi
 
 echo "Deploying $(du -sh "$DIST" | awk '{print $1}') from $DIST ..."
 # Upload often succeeds even if wrangler then trips on a local cache path; check exit and pages.dev.
