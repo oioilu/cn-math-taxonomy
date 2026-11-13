@@ -18,6 +18,7 @@ DATA = os.path.join(ROOT, "data")
 ORIG = os.path.join(DATA, "_orig")
 KEEP_PREFIX = {"cnm", "cnp", "cnk"}
 MIN_GRADE = 10
+# UPSTREAM_BASE=548320e   # 上游基线：由 scripts/sync_upstream.sh 写入，勿手改
 
 
 def load(name):
