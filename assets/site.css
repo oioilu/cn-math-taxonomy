@@ -390,6 +390,19 @@ code { overflow-wrap: anywhere; }
   .top-banner { display: none !important; }
 }
 
+/* 旧版本遗留的已下线学科深链（?subject=chinese 等）落地时的提示条 */
+.retired-subject-notice {
+  margin: 0 0 18px;
+  padding: 11px 14px;
+  border: 1px solid #e6d2a6;
+  border-radius: 10px;
+  background: #fdf6e7;
+  color: #6b4a12;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.retired-subject-notice strong { color: #4a3208; }
+
 .site-header {
   display: flex;
   flex-wrap: wrap;
