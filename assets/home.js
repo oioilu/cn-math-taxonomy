@@ -7,7 +7,14 @@
 
   var CN = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
   var subjectParam = new URLSearchParams(location.search).get('subject');
-  var subject = subjectParam === 'english' || subjectParam === 'physics' || subjectParam === 'chinese' || subjectParam === 'science' || subjectParam === 'morality' || subjectParam === 'history' || subjectParam === 'geography' || subjectParam === 'biology' || subjectParam === 'chemistry' ? subjectParam : 'math';
+  var SUBJECT_LABEL = {
+    math: '数学', english: '英语', physics: '物理', chinese: '语文', science: '科学',
+    morality: '道德与法治', history: '历史', geography: '地理', biology: '生物', chemistry: '化学'
+  };
+  // 本站只保留高中数学 / 物理 / 化学；其余学科是旧版本遗留的深链。
+  var KEPT = { math: 1, physics: 1, chemistry: 1 };
+  var retiredSubject = subjectParam && SUBJECT_LABEL[subjectParam] && !KEPT[subjectParam] ? subjectParam : null;
+  var subject = subjectParam && KEPT[subjectParam] ? subjectParam : 'math';
   var PREFIX = { math: 'cnm_', english: 'cne_', physics: 'cnp_', chinese: 'cnc_', science: 'cns_', morality: 'cnd_', history: 'cnh_', geography: 'cng_', biology: 'cnb_', chemistry: 'cnk_' };
   var STD_PREFIX = { math: 'cms-', english: 'ces-', physics: 'cps-', chinese: 'ccs-', science: 'css-', morality: 'cds-', history: 'chs-', geography: 'cgs-', biology: 'cbs-', chemistry: 'cks-' };
 
@@ -25,6 +32,21 @@
   document.body.classList.toggle('subject-geography', subject === 'geography');
   document.body.classList.toggle('subject-biology', subject === 'biology');
   document.body.classList.toggle('subject-chemistry', subject === 'chemistry');
+
+  if (retiredSubject) {
+    var notice = document.createElement('div');
+    notice.className = 'retired-subject-notice';
+    notice.setAttribute('role', 'status');
+    notice.innerHTML = '<strong>' + SUBJECT_LABEL[retiredSubject] + '不在本站范围内。</strong>' +
+      '本站只保留高中数学、物理、化学，旧「' + SUBJECT_LABEL[retiredSubject] + '」链接已失效，已自动切到数学。';
+    var homeMain = document.querySelector('main.home');
+    if (homeMain) homeMain.insertBefore(notice, homeMain.firstChild);
+    try {
+      var clean = new URL(location.href);
+      clean.searchParams.delete('subject');
+      history.replaceState(null, '', clean.pathname + clean.search + clean.hash);
+    } catch (e) { /* 老浏览器不支持 URL / replaceState，忽略 */ }
+  }
   document.querySelectorAll('.subject-link').forEach(function (link) {
     var on = link.getAttribute('data-subject') === subject;
     link.classList.toggle('on', on);
